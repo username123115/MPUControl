@@ -4,6 +4,7 @@
 #include "pico/stdlib.h"
 #include "hardware/i2c.h"
 #include "hardware/gpio.h"
+#include "time.h"
 
 // I2C defines
 // This example will use I2C0 on GPIO8 (SDA) and GPIO9 (SCL) running at 400KHz.
@@ -54,9 +55,9 @@ int main()
 {
     stdio_init_all();
 
-    gpio_init(POWER);
-    gpio_set_dir(POWER, true);
-    gpio_put(POWER, true);
+    // gpio_init(POWER);
+    // gpio_set_dir(POWER, true);
+    // gpio_put(POWER, true);
 
     // I2C Initialisation. Using it at 400Khz.
     i2c_init(I2C_PORT, 400*1000);
@@ -104,25 +105,19 @@ int main()
     writeRegister(I2C_PORT, MPU6050, ACCEL_CONFIG, &accelConfigSettings, 1);
 
     printf("%u\n", sizeof(info));
-    uint8_t accelMeasurementsH = 0;
-    uint8_t accelMeasurementsL = 0;
+    uint8_t accelMeasurements[] = {0, 0};
     uint8_t regAddress = 0x47;
-    uint8_t regAddress2 = regAddress + 1;
     uint16_t final = 0;
     bool neg = false;
-    int ret;
     while (true)
     {
         // printf("%u\n", measurements.gyroXH << 8 + measurements.gyroXL);
         sleep_ms(100);
-        i2c_write_blocking(I2C_PORT, MPU6050, &regAddress, 1, true);
-        ret = i2c_read_blocking(I2C_PORT, MPU6050, (uint8_t*)&accelMeasurementsH, 1, false);
-        i2c_write_blocking(I2C_PORT, MPU6050, &regAddress2, 1, true);
-        i2c_read_blocking(I2C_PORT, MPU6050, &accelMeasurementsL, 1, false);
+        readRegister(I2C_PORT, MPU6050, regAddress, (uint8_t*)&accelMeasurements, 2);
 
-        final = (accelMeasurementsH << 8) + accelMeasurementsL;
+        final = (accelMeasurements[0] << 8) + accelMeasurements[1];
         neg = false;
-        if ((accelMeasurementsH >> 7) == 1)
+        if ((accelMeasurements[0] >> 7) == 1)
         {
             neg = true;
         }
@@ -144,9 +139,7 @@ int main()
             printf("left\n");
             gpio_put(LED_PIN, false);
         }
-        // printf("%u\n", ~(0xFEFE));
-        // printf("%u\n", accelMeasurements[0]);
-        // printf("%u\n", accelMeasurements[1]);
+        printf("%u\n", time_us_32());
         // readRegister(I2C_PORT, MPU6050, MEASURE_START, (uint8_t*)&measurements, 14);
     }
 }
